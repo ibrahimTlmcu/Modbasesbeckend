@@ -15,7 +15,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:4200")
+
 public class ModController {
 
     private final CategoryRepository categoryRepository;

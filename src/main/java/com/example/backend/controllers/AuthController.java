@@ -23,7 +23,7 @@ public class AuthController {
     private final UserAuthProvider userAuthProvider;
 
 
-    @CrossOrigin(origins = "http://localhost:4200")
+   
     @PostMapping("/login")
     public ResponseEntity<UserDto> login(@RequestBody @Valid CredentialsDto credentialsDto) {
         UserDto dto = userService.login(credentialsDto);
@@ -33,7 +33,7 @@ public class AuthController {
     }
 
 
-    @CrossOrigin(origins = "http://localhost:4200")
+   
     // src/main/java/com/example/backend/controllers/AuthController.java
     @PostMapping("/register")
     public ResponseEntity<UserDto> register(@RequestBody @Valid SignUpDto dto) {

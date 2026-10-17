@@ -1,6 +1,5 @@
 package com.example.backend.config;
 
-import com.example.backend.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,18 +25,30 @@ public class SecurityConfig {
     private final UserAuthenticationEntryPoint userAuthenticationEntryPoint;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+            throws Exception {
+
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .exceptionHandling(c -> c.authenticationEntryPoint(userAuthenticationEntryPoint))
-                .addFilterBefore(new JwtAuthFilter(userAuthenticationProvider), BasicAuthenticationFilter.class) // BUNU EKLE
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/login", "/register").permitAll()
-                        .requestMatchers("/api/talepler/kullanici-talepleri").authenticated()
-                        .anyRequest().permitAll()
-                );
+            .cors(cors ->
+                cors.configurationSource(corsConfigurationSource())
+            )
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .exceptionHandling(exception ->
+                exception.authenticationEntryPoint(userAuthenticationEntryPoint)
+            )
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/login", "/register").permitAll()
+                .requestMatchers("/api/talepler/kullanici-talepleri").authenticated()
+                .anyRequest().permitAll()
+            )
+            .addFilterBefore(
+                new JwtAuthFilter(userAuthenticationProvider),
+                BasicAuthenticationFilter.class
+            );
 
         return http.build();
     }
@@ -45,11 +56,26 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200")); // Angular URL'niz
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "https://modbases.com",
+            "https://www.modbases.com",
+            "https://*.modbases.com",
+            "http://localhost:4200"
+        ));
+
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"
+        ));
+
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true); // JWT için gerekli olabilir
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source =
+            new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }

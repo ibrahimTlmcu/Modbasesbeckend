@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/faqs")
-@CrossOrigin(origins = "http://localhost:4200") // Angular'ın varsayılan portu
+
 public class FaqController {
     @Autowired
     private FaqService faqService;
