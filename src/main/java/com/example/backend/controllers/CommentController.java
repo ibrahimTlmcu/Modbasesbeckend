@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/comments")
-@CrossOrigin(origins = "*") // Angular ile haberleşebilmesi için CORS izni
+
 public class CommentController {
 
     @Autowired
