@@ -1,5 +1,5 @@
+package com.example.backend.controllers;
 
-package com.example.backend.controller;
 
 import com.example.backend.entity.CategoryTranslation;
 import com.example.backend.entity.ModItemTranslation;
@@ -102,6 +102,87 @@ public class SeoSitemapController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_XML)
                 .body(xml.toString());
+    }
+
+    @GetMapping("/api/seo/category/{id}/alternates")
+    public ResponseEntity<Map<String, String>> categoryAlternates(
+            @org.springframework.web.bind.annotation.PathVariable Long id
+    ) {
+        Map<String, String> urls = new LinkedHashMap<>();
+
+        for (CategoryTranslation translation : categoryRepository.findAll()) {
+            if (!translation.getCategory().getId().equals(id)) {
+                continue;
+            }
+
+            String lang = translation.getLanguageCode();
+            String slug = translation.getSlug();
+
+            if (LANGS.contains(lang) && validSlug(slug)) {
+                urls.put(lang, url(lang, slug));
+            }
+        }
+
+        if (urls.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(urls);
+    }
+
+    @GetMapping("/api/seo/mod/{id}/alternates")
+    public ResponseEntity<Map<String, String>> modAlternates(
+            @org.springframework.web.bind.annotation.PathVariable Long id
+    ) {
+        Map<Long, Map<String, String>> categoryUrls = new HashMap<>();
+
+        for (CategoryTranslation category : categoryRepository.findAll()) {
+            String lang = category.getLanguageCode();
+
+            if (!LANGS.contains(lang) || !validSlug(category.getSlug())) {
+                continue;
+            }
+
+            Long categoryId = category.getCategory().getId();
+
+            categoryUrls
+                    .computeIfAbsent(categoryId, k -> new HashMap<>())
+                    .put(lang, url(lang, category.getSlug()));
+        }
+
+        Map<String, String> urls = new LinkedHashMap<>();
+
+        for (ModItemTranslation mod : modRepository.findAll()) {
+            if (!mod.getModItem().getId().equals(id)) {
+                continue;
+            }
+
+            if (mod.getModItem().getCategory() == null) {
+                continue;
+            }
+
+            String lang = mod.getLanguageCode();
+
+            if (!LANGS.contains(lang) || !validSlug(mod.getSlug())) {
+                continue;
+            }
+
+            Long categoryId = mod.getModItem().getCategory().getId();
+
+            String categoryUrl = categoryUrls
+                    .getOrDefault(categoryId, Collections.emptyMap())
+                    .get(lang);
+
+            if (categoryUrl != null) {
+                urls.put(lang, categoryUrl + "/" + mod.getSlug());
+            }
+        }
+
+        if (urls.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(urls);
     }
 
     private String url(String language, String slug) {
