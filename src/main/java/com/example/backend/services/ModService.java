@@ -1,4 +1,5 @@
-package com.example.backend.services;
+
+        package com.example.backend.services;
 
 import com.example.backend.dto.*;
 import com.example.backend.entity.*;
@@ -6,6 +7,7 @@ import com.example.backend.repositories.CategoryRepository;
 import com.example.backend.repositories.CategoryTranslationRepository;
 import com.example.backend.repositories.ModItemRepository;
 import com.example.backend.repositories.ModItemTranslationRepository;
+import com.example.backend.service.TranslationService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,6 +32,7 @@ public class ModService {
     private final ModItemRepository modItemRepository;
     private final CategoryTranslationRepository categoryTranslationRepository;
     private final ModItemTranslationRepository modItemTranslationRepository;
+    private final TranslationService translationService;
 
     private static final Set<String> LANGUAGES = Set.of("tr", "en", "de");
 
@@ -77,6 +80,11 @@ public class ModService {
                     "En az bir dil çevirisi göndermelisiniz."
             );
         }
+    }
+
+    private String localizedSlug(String sourceSlug, String language) {
+        // Mevcut TR slug'ını koru; dil bazında benzersiz URL üret.
+        return sourceSlug.trim().toLowerCase(Locale.ROOT) + "-" + language;
     }
 
     // ==================== KATEGORİ BULMA ====================
@@ -332,6 +340,27 @@ public class ModService {
             translations.add(translation);
         }
 
+        // Sadece Türkçe gönderilmişse eksik EN/DE çevirilerini oluştur.
+        CategoryTranslationRequest trCategory = request.translations().stream()
+                .filter(t -> t != null && "tr".equalsIgnoreCase(t.languageCode()))
+                .findFirst().orElse(null);
+        if (trCategory != null) {
+            for (String target : List.of("en", "de")) {
+                if (usedLanguages.contains(target)) continue;
+                CategoryTranslation translated = new CategoryTranslation();
+                translated.setCategory(category);
+                translated.setLanguageCode(target);
+                translated.setName(translationService.translate(trCategory.name(), target));
+                translated.setSlug(localizedSlug(trCategory.slug(), target));
+                translated.setMainGroup(translationService.translate(trCategory.mainGroup(), target));
+                translated.setHeaderTitle(translationService.translate(trCategory.headerTitle(), target));
+                translated.setDescription(translationService.translate(trCategory.description(), target));
+                translated.setBackLinkText(translationService.translate(trCategory.backLinkText(), target));
+                translated.setAboutTitle(translationService.translate(trCategory.aboutTitle(), target));
+                translations.add(translated);
+            }
+        }
+
         category.setTranslations(translations);
         Category saved = categoryRepository.save(category);
 
@@ -474,6 +503,41 @@ public class ModService {
             translation.setIframeTitle(input.iframeTitle());
 
             translations.add(translation);
+        }
+
+        // Türkçe içerikten eksik EN/DE çevirilerini otomatik hazırla.
+        ModItemTranslationRequest trMod = request.translations().stream()
+                .filter(t -> t != null && "tr".equalsIgnoreCase(t.languageCode()))
+                .findFirst().orElse(null);
+        if (trMod != null) {
+            for (String target : List.of("en", "de")) {
+                if (usedLanguages.contains(target)) continue;
+                ModItemTranslation translated = new ModItemTranslation();
+                translated.setModItem(item);
+                translated.setLanguageCode(target);
+                translated.setTitle(translationService.translate(trMod.title(), target));
+                translated.setSlug(localizedSlug(trMod.slug(), target));
+                translated.setShortDescription(translationService.translate(trMod.shortDescription(), target));
+                translated.setBadgeText(translationService.translate(trMod.badgeText(), target));
+                translated.setGallery(trMod.gallery() == null
+                        ? new ArrayList<>() : new ArrayList<>(trMod.gallery()));
+                translated.setAboutDescription(translationService.translate(trMod.aboutDescription(), target));
+                List<String> translatedFeatures = new ArrayList<>();
+                if (trMod.features() != null) {
+                    for (String feature : trMod.features()) {
+                        translatedFeatures.add(translationService.translate(feature, target));
+                    }
+                }
+                translated.setFeatures(translatedFeatures);
+                translated.setDownloadUrl(trMod.downloadUrl());
+                translated.setDownloadBtnText(translationService.translate(trMod.downloadBtnText(), target));
+                translated.setInstallNote(translationService.translate(trMod.installNote(), target));
+                translated.setVideoSectionTitle(translationService.translate(trMod.videoSectionTitle(), target));
+                translated.setVideoDescription(translationService.translate(trMod.videoDescription(), target));
+                translated.setYoutubeEmbedUrl(trMod.youtubeEmbedUrl());
+                translated.setIframeTitle(translationService.translate(trMod.iframeTitle(), target));
+                translations.add(translated);
+            }
         }
 
         item.setTranslations(translations);
