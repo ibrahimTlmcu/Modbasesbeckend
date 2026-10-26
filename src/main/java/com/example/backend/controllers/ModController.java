@@ -1,131 +1,128 @@
 package com.example.backend.controllers;
 
-import com.example.backend.entity.Category;
-import com.example.backend.entity.ModItem;
-import com.example.backend.repositories.CategoryRepository;
-import com.example.backend.repositories.ModItemRepository;
+import com.example.backend.dto.CategoryRequest;
+import com.example.backend.dto.CategoryResponse;
+import com.example.backend.dto.ModItemRequest;
+import com.example.backend.dto.ModItemResponse;
+import com.example.backend.services.ModService;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-
 public class ModController {
 
-    private final CategoryRepository categoryRepository;
-    private final ModItemRepository modItemRepository;
+    private final ModService modService;
 
-    // Yardımcı Metot: Gelen değer sayıysa (örn: "4") ID ile, metinse (örn: "ets2") Slug ile kategoriyi bulur
-    private Optional<Category> findCategoryByIdOrSlug(String idOrSlug) {
-        if (idOrSlug != null && idOrSlug.matches("\\d+")) {
-            return categoryRepository.findById(Long.parseLong(idOrSlug))
-                    .or(() -> categoryRepository.findBySlug(idOrSlug));
-        }
-        return categoryRepository.findBySlug(idOrSlug);
-    }
-
-    // ==================== GET (OKUMA) İŞLEMLERİ ====================
-
-    // 1. Tüm kategorileri getirir: GET -> http://localhost:8080/api/categories
+    // GET /api/categories?lang=en
     @GetMapping("/categories")
-    public List<Category> getAllCategories() {
-        return categoryRepository.findAll();
+    public List<CategoryResponse> getAllCategories(
+            @RequestParam(defaultValue = "tr") String lang
+    ) {
+        return modService.getAllCategories(lang);
     }
 
-    // 2. Seçilen kategoriyi getirir (Hem ID hem Slug destekler): GET -> /api/categories/4 veya /api/categories/ets2
+    // GET /api/categories/minecraft-mods?lang=en
+    // GET /api/categories/4?lang=en
     @GetMapping("/categories/{categorySlug}")
-    public ResponseEntity<Category> getCategoryBySlug(@PathVariable String categorySlug) {
-        return findCategoryByIdOrSlug(categorySlug)
+    public ResponseEntity<CategoryResponse> getCategory(
+            @PathVariable String categorySlug,
+            @RequestParam(defaultValue = "tr") String lang
+    ) {
+        return modService.getCategory(categorySlug, lang)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // 3. Kategorideki modları getirir (Hem ID hem Slug destekler): GET -> /api/categories/4/mods veya /api/categories/ets2/mods
+    // GET /api/categories/minecraft-mods/mods?lang=en
     @GetMapping("/categories/{categorySlug}/mods")
-    public List<ModItem> getModsByCategory(@PathVariable String categorySlug) {
-        return findCategoryByIdOrSlug(categorySlug)
-                .map(category -> modItemRepository.findByCategory_Slug(category.getSlug()))
-                .orElse(Collections.emptyList());
+    public List<ModItemResponse> getModsByCategory(
+            @PathVariable String categorySlug,
+            @RequestParam(defaultValue = "tr") String lang
+    ) {
+        return modService.getModsByCategory(categorySlug, lang);
     }
 
-    // 4. Tüm modları getirir (Admin paneli listesi için): GET -> http://localhost:8080/api/mods
+    // GET /api/mods?lang=en
     @GetMapping("/mods")
-    public List<ModItem> getAllMods() {
-        return modItemRepository.findAll();
+    public List<ModItemResponse> getAllMods(
+            @RequestParam(defaultValue = "tr") String lang
+    ) {
+        return modService.getAllMods(lang);
     }
 
-    // 5. Mod detayını getirir (Hem ID hem Slug destekler): GET -> /api/mods/ets2/snowy-moon
+    // GET /api/mods/minecraft-mods/example-mod?lang=en
     @GetMapping("/mods/{categorySlug}/{modSlug}")
-    public ResponseEntity<ModItem> getModDetail(
+    public ResponseEntity<ModItemResponse> getModDetail(
             @PathVariable String categorySlug,
-            @PathVariable String modSlug) {
-        return findCategoryByIdOrSlug(categorySlug)
-                .flatMap(category -> modItemRepository.findByCategory_SlugAndSlug(category.getSlug(), modSlug))
+            @PathVariable String modSlug,
+            @RequestParam(defaultValue = "tr") String lang
+    ) {
+        return modService.getModDetail(categorySlug, modSlug, lang)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // ==================== POST (EKLEME) İŞLEMLERİ ====================
-
-    // 6. Yeni Kategori Ekleme: POST -> http://localhost:8080/api/categories
+    // POST /api/categories?lang=en
     @PostMapping("/categories")
-    public ResponseEntity<Category> createCategory(@RequestBody Category category) {
-        Category saved = categoryRepository.save(category);
-        return ResponseEntity.ok(saved);
+    public ResponseEntity<CategoryResponse> createCategory(
+            @RequestBody CategoryRequest request,
+            @RequestParam(defaultValue = "tr") String lang
+    ) {
+        return ResponseEntity.ok(
+                modService.createCategory(request, lang)
+        );
     }
 
-    // 7. Kategoriye Yeni Mod Ekleme (Hem ID hem Slug destekler): POST -> /api/categories/4/mods veya /api/categories/ets2/mods
+    // POST /api/categories/minecraft-mods/mods?lang=en
     @PostMapping("/categories/{categorySlug}/mods")
-    public ResponseEntity<ModItem> createModByCategorySlug(
+    public ResponseEntity<ModItemResponse> createModByCategory(
             @PathVariable String categorySlug,
-            @RequestBody ModItem modItem) {
-        return findCategoryByIdOrSlug(categorySlug)
-                .map(category -> {
-                    modItem.setCategory(category);
-                    return ResponseEntity.ok(modItemRepository.save(modItem));
-                })
-                .orElse(ResponseEntity.notFound().build());
+            @RequestBody ModItemRequest request,
+            @RequestParam(defaultValue = "tr") String lang
+    ) {
+        return ResponseEntity.ok(
+                modService.createModByCategory(
+                        categorySlug,
+                        request,
+                        lang
+                )
+        );
     }
 
-    // 8. Doğrudan Mod Ekleme (Alternatif): POST -> http://localhost:8080/api/mods
+    // POST /api/mods?lang=en
     @PostMapping("/mods")
-    public ResponseEntity<ModItem> createModDirect(@RequestBody ModItem modItem) {
-        if (modItem.getCategory() != null && modItem.getCategory().getId() != null) {
-            categoryRepository.findById(modItem.getCategory().getId())
-                    .ifPresent(modItem::setCategory);
-        } else if (modItem.getCategory() != null && modItem.getCategory().getSlug() != null) {
-            findCategoryByIdOrSlug(modItem.getCategory().getSlug())
-                    .ifPresent(modItem::setCategory);
-        }
-        return ResponseEntity.ok(modItemRepository.save(modItem));
+    public ResponseEntity<ModItemResponse> createModDirect(
+            @RequestBody ModItemRequest request,
+            @RequestParam(defaultValue = "tr") String lang
+    ) {
+        return ResponseEntity.ok(
+                modService.createModDirect(request, lang)
+        );
     }
 
-    // ==================== DELETE (SİLME) İŞLEMLERİ ====================
-
-    // 9. Kategori Silme (Hem ID hem Slug destekler): DELETE -> /api/categories/4 veya /api/categories/ets2
+    // DELETE /api/categories/4?lang=tr
     @DeleteMapping("/categories/{idOrSlug}")
-    public ResponseEntity<Void> deleteCategory(@PathVariable String idOrSlug) {
-        Optional<Category> categoryOpt = findCategoryByIdOrSlug(idOrSlug);
-        if (categoryOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        categoryRepository.delete(categoryOpt.get());
+    public ResponseEntity<Void> deleteCategory(
+            @PathVariable String idOrSlug,
+            @RequestParam(defaultValue = "tr") String lang
+    ) {
+        modService.deleteCategory(idOrSlug, lang);
         return ResponseEntity.noContent().build();
     }
 
-    // 10. Mod Silme: DELETE -> http://localhost:8080/api/mods/{id}
+    // DELETE /api/mods/4
     @DeleteMapping("/mods/{id}")
-    public ResponseEntity<Void> deleteMod(@PathVariable Long id) {
-        if (!modItemRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        modItemRepository.deleteById(id);
+    public ResponseEntity<Void> deleteMod(
+            @PathVariable Long id
+    ) {
+        modService.deleteMod(id);
         return ResponseEntity.noContent().build();
     }
 }

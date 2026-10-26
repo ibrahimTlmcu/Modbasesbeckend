@@ -4,7 +4,10 @@ import com.example.backend.entity.Category;
 import com.example.backend.entity.GalleryImage;
 import jakarta.persistence.*;
 import lombok.Data;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import java.util.ArrayList;
 
 import java.util.List;
 
@@ -12,6 +15,7 @@ import java.util.List;
 @Data
 @Table(name = "mod_items")
 public class ModItem {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -19,6 +23,21 @@ public class ModItem {
     // --- Galeri Kartı Bilgileri ---
     private String title;             // Örn: "CCleaner Sistem Temizleme ve Optimizasyon"
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Category category;
+
+    @OneToMany(
+            mappedBy = "modItem",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<ModItemTranslation> translations = new ArrayList<>();
     @Column(unique = true)
     private String slug;              // Örn: "ccleaner" veya "optifine"
     private String thumbnailUrl;      // Kategori sayfasındaki kart görseli
@@ -56,8 +75,5 @@ public class ModItem {
     private String youtubeEmbedUrl;   // Örn: "https://www.youtube.com/embed/8ZYt2MgTSSQ?si=HvJHM8Byn8wMiTSf"
     private String iframeTitle;       // Örn: "CCleaner Tutorial"
 
-    // --- Bağlı Olduğu Kategori (Minecraft, ETS 2, Programlar vb.) ---
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "category_id")
-    private Category category;
+
 }

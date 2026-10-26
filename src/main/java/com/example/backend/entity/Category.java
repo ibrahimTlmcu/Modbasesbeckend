@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import java.util.ArrayList;
 
 @Entity
 @Data
@@ -12,6 +15,21 @@ public class Category {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<ModItem> items;
+
+    @OneToMany(
+            mappedBy = "category",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<CategoryTranslation> translations = new ArrayList<>();
 
     private String mainGroup;   // Örn: "Oyunlar" veya "Programlar" (Üst menü gruplaması için)
     private String name;        // Örn: "Minecraft", "Mount & Blade II: Bannerlord", "Sistem Araçları"
@@ -26,7 +44,4 @@ public class Category {
     private String backLinkText; // Örn: "← Program Galerisine Dön" veya "← Minecraft Modlarına Dön"
     private String aboutTitle;   // Örn: "Program Hakkında" veya "Mod Hakkında"
 
-    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
-    @JsonIgnore
-    private List<ModItem> items;
 }
