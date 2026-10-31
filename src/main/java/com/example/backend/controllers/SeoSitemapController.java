@@ -36,10 +36,9 @@ public class SeoSitemapController {
 
         Map<String, String> home = new LinkedHashMap<>();
         home.put("tr", BASE + "/");
-        home.put("en", BASE + "/en/dashboard");
-        home.put("de", BASE + "/de/dashboard");
+        home.put("en", BASE + "/en");
+        home.put("de", BASE + "/de");
         appendAlternates(xml, home);
-
         List<CategoryTranslation> categories = categoryRepository.findAll();
 
         Map<Long, Map<String, String>> categoryUrls = new HashMap<>();
